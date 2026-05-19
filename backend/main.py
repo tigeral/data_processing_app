@@ -1,6 +1,8 @@
 import logging
+from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from app.api.drops import router as drops_router
 
 logging.basicConfig(
@@ -18,3 +20,8 @@ app.add_middleware(
 )
 
 app.include_router(drops_router, prefix="/api/v1")
+
+# Serve the compiled frontend when the dist directory is present (packaged build)
+_frontend_dist = Path(__file__).parent.parent / "frontend" / "dist"
+if _frontend_dist.is_dir():
+    app.mount("/", StaticFiles(directory=str(_frontend_dist), html=True), name="frontend")
