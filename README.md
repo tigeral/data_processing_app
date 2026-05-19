@@ -14,7 +14,7 @@ The application follows a local client-server model: a Python/FastAPI backend se
 | Database | PostgreSQL |
 | Frontend | React, TypeScript, React Flow |
 | Communication | REST API, WebSockets |
-| Desktop packaging | (TBD — Phase 2) |
+| Desktop packaging | PyInstaller + Inno Setup (Windows) |
 | Testing | pytest, Playwright |
 | CI/CD | GitHub Actions |
 
@@ -70,6 +70,39 @@ npm run dev
 Or on Windows, run `scripts\start-frontend.bat`.
 
 Open [http://localhost:5173](http://localhost:5173) in your browser. The backend must be running for drops to be forwarded to the server.
+
+### Stopping the servers
+
+```bat
+scripts\stop-backend.bat
+scripts\stop-frontend.bat
+```
+
+## Building a Windows Desktop Package
+
+Produces a standalone installer that requires no Python or Node.js on the target machine.
+
+### Prerequisites
+
+- [Inno Setup 6](https://jrsoftware.org/isinfo.php) installed and `iscc` available in `PATH`
+- Python venv set up (`py -m venv .venv && .venv\Scripts\pip install -r requirements.txt`)
+- Node.js 20+ and npm
+
+### Build
+
+```bat
+scripts\build-windows.bat
+```
+
+The script runs three steps automatically:
+
+1. **Frontend** — `npm run build` compiles the React app to `frontend/dist/`.
+2. **PyInstaller** — bundles the Python backend and `frontend/dist/` into `dist/DataProcessingApp/`.
+3. **Inno Setup** — packages everything into `dist/installer/DataProcessingApp-setup.exe`.
+
+### Install and run
+
+Run `DataProcessingApp-setup.exe` on any Windows machine. After installation, use the desktop shortcut or Start Menu entry to launch the app. The launcher starts the backend server and opens the app in your default browser automatically.
 
 ## Documentation
 
