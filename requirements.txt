@@ -1,0 +1,18 @@
+# Web framework and server
+fastapi>=0.115
+uvicorn[standard]>=0.34
+
+# Data validation
+pydantic>=2.11
+
+# Testing
+pytest>=8.3
+pytest-asyncio>=0.26
+httpx>=0.28
+
+# --- Phase 3+ (uncomment when needed) ---
+# celery>=5.5
+# redis>=5.0
+# sqlalchemy>=2.0
+# psycopg[binary]>=3.2   # psycopg2-binary has no wheel for Python 3.14+
+# alembic>=1.16
