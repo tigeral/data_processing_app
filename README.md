@@ -109,6 +109,7 @@ Run `DataProcessingApp-setup.exe` on any Windows machine. After installation, us
 - [Architecture](docs/architecture.md)
 - [Roadmap](docs/roadmap.md)
 - [Phase 1 Spec](docs/phase1.md)
+- [Phase 2 Spec & Design Decisions](docs/phase2.md)
 - [Development Workflow](docs/dev-workflow.md)
 
 ## Development Workflow

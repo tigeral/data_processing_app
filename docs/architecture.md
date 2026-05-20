@@ -11,6 +11,8 @@ Users interact exclusively through the frontend. The backend handles all process
 
 ## High-Level Component Diagram
 
+### Development mode
+
 ```
 +--------------------------------------------------+
 |                 Desktop Application              |
@@ -18,23 +20,38 @@ Users interact exclusively through the frontend. The backend handles all process
 |  +------------------+    +--------------------+  |
 |  |    Frontend       |    |      Backend       |  |
 |  |  (React / TS)     |<-->|  (FastAPI / Python)|  |
-|  |                   | REST|                   |  |
-|  |  - Dashboard      | WS  |  - REST API       |  |
-|  |  - Workflow       |    |  - WebSocket hub   |  |
-|  |    Builder        |    |  - Celery worker   |  |
-|  |  - Drop Zone      |    |  - Execution       |  |
-|  |                   |    |    engine          |  |
-|  +------------------+    +--------+-----------+  |
-|                                   |               |
-|                          +--------+-----------+   |
-|                          |   PostgreSQL DB    |   |
-|                          +--------------------+   |
+|  |  Vite dev server  | REST|  uvicorn --reload  |  |
+|  |  localhost:5173   | WS  |  localhost:8000   |  |
+|  +------------------+    +--------------------+  |
 +--------------------------------------------------+
-         |                          |
-         v                          v
-   External APIs             Local File System
-   AI model APIs
-   Browser automation (Playwright)
+```
+
+### Packaged build (Phase 2+)
+
+```
++----------------------------------------------------+
+|  DataProcessingApp.exe  (PyInstaller --onedir)     |
+|                                                    |
+|  launcher.py                                       |
+|    |                                               |
+|    +--[thread]--> uvicorn.Server                   |
+|    |                  |                            |
+|    |                  +--> FastAPI app             |
+|    |                           |                   |
+|    |                           +--> /api/v1/*      |
+|    |                           +--> / (static)     |
+|    |                                frontend/dist  |
+|    |                                               |
+|    +--[subprocess]--> msedge --app=localhost:8000  |
+|                          (chrome-less window)      |
+|                                                    |
+|    on window close --> server.should_exit = True   |
++----------------------------------------------------+
+          |                      |
+          v                      v
+    External APIs          Local File System
+    AI model APIs
+    Browser automation (Playwright)
 ```
 
 ## Components
@@ -70,9 +87,10 @@ The application is primarily local, but may be accessed over LAN or the internet
 
 ## Build and Deployment
 
-- **Development** — backend and frontend run as separate processes with hot reload.
-- **Desktop packaging** — (Phase 2+) native installers for Windows, macOS, and Linux. Packaging strategy TBD (Electron, Tauri, or custom launcher).
-- **Staging/CI** — GitHub Actions deploys to a test server on each merge to the main branch.
+- **Development** — backend (`uvicorn --reload`, port 8000) and frontend (Vite dev server, port 5173) run as separate processes. Use `scripts\start-backend.bat` and `scripts\start-frontend.bat`.
+- **Desktop packaging (Windows)** — `scripts\build-windows.bat` runs the full pipeline: `npm run build` → PyInstaller `--onedir` → Inno Setup installer. See [phase2.md](phase2.md) for full details and design decisions.
+- **macOS / Linux packaging** — deferred to a later phase.
+- **Staging/CI** — GitHub Actions deploys to a test server on each merge to the main branch (Phase 8).
 
 ## External Integrations
 

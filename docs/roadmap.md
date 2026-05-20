@@ -14,13 +14,18 @@ See [phase1.md](phase1.md) for the detailed specification.
 
 ---
 
-## Phase 2 — Native Desktop App (Windows)
+## Phase 2 — Native Desktop App (Windows) ✓ Complete
 
 Goal: Package the application as a native Windows installer.
 
-- Research and select desktop packaging approach (Electron, Tauri, or custom launcher).
-- Set up local build scripts for producing a standalone Windows executable.
-- Create a Windows installer (NSIS, WiX, or similar).
+- [x] Selected packaging approach: PyInstaller (`--onedir`) + Inno Setup.
+- [x] `launcher.py` — starts uvicorn in-process and opens the app in an Edge app-mode window.
+- [x] Backend serves compiled frontend static files via FastAPI `StaticFiles`.
+- [x] `scripts/build-windows.bat` — one-command build: frontend → PyInstaller → installer.
+- [x] `installer/setup.iss` — Inno Setup script with desktop shortcut and clean uninstaller.
+- [x] Window close triggers clean backend shutdown via `uvicorn.Server.should_exit`.
+
+See [phase2.md](phase2.md) for full design decisions, bugs fixed, and known limitations.
 
 ---
 
