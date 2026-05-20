@@ -16,12 +16,26 @@ STARTUP_TIMEOUT = 15  # seconds to wait for backend to become ready
 
 # When bundled by PyInstaller, all files are extracted to sys._MEIPASS.
 # When running from source, use the project root.
-_BUNDLE_ROOT = Path(sys._MEIPASS) if hasattr(sys, "_MEIPASS") else Path(__file__).parent
-_BACKEND_DIR = _BUNDLE_ROOT / "backend"
+_IS_BUNDLED = hasattr(sys, "_MEIPASS")
+_BUNDLE_ROOT = Path(sys._MEIPASS) if _IS_BUNDLED else Path(__file__).parent
 
-# Make backend package importable (required in both bundled and source modes).
-if str(_BACKEND_DIR) not in sys.path:
-    sys.path.insert(0, str(_BACKEND_DIR))
+# With console=False PyInstaller builds, sys.stdout and sys.stderr are None.
+# Uvicorn and logging write to stderr on startup — redirect to a log file to
+# prevent AttributeError crashes that would silently kill the server thread.
+if sys.stdout is None or sys.stderr is None:
+    _log_path = _BUNDLE_ROOT / "app.log"
+    _log_file = open(_log_path, "w", buffering=1, encoding="utf-8")
+    if sys.stdout is None:
+        sys.stdout = _log_file
+    if sys.stderr is None:
+        sys.stderr = _log_file
+
+# Make backend importable when running from source (in the bundle, PyInstaller
+# already compiled and archived backend modules, so no sys.path change needed).
+if not _IS_BUNDLED:
+    _backend_dir = _BUNDLE_ROOT / "backend"
+    if str(_backend_dir) not in sys.path:
+        sys.path.insert(0, str(_backend_dir))
 
 
 def _backend_ready() -> bool:
@@ -34,7 +48,7 @@ def _backend_ready() -> bool:
 
 def _run_server() -> None:
     import uvicorn
-    from main import app  # backend/main.py is on sys.path via _BACKEND_DIR
+    from main import app  # backend/main.py is importable via sys.path (source) or archive (bundle)
     uvicorn.run(app, host=HOST, port=PORT, log_level="info")
 
 
