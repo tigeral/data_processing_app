@@ -2,18 +2,26 @@
 Desktop launcher: starts the FastAPI backend and opens the app in the default browser.
 Used both as a dev convenience script and as the entry point for the packaged Windows exe.
 """
-import subprocess
 import sys
 import time
+import threading
 import webbrowser
 import urllib.request
-import urllib.error
 from pathlib import Path
 
 HOST = "127.0.0.1"
 PORT = 8000
 URL = f"http://{HOST}:{PORT}"
 STARTUP_TIMEOUT = 15  # seconds to wait for backend to become ready
+
+# When bundled by PyInstaller, all files are extracted to sys._MEIPASS.
+# When running from source, use the project root.
+_BUNDLE_ROOT = Path(sys._MEIPASS) if hasattr(sys, "_MEIPASS") else Path(__file__).parent
+_BACKEND_DIR = _BUNDLE_ROOT / "backend"
+
+# Make backend package importable (required in both bundled and source modes).
+if str(_BACKEND_DIR) not in sys.path:
+    sys.path.insert(0, str(_BACKEND_DIR))
 
 
 def _backend_ready() -> bool:
@@ -24,13 +32,10 @@ def _backend_ready() -> bool:
         return False
 
 
-def _find_uvicorn() -> str:
-    # When bundled by PyInstaller, uvicorn is in the same directory as the exe
-    bundle_dir = Path(getattr(sys, "_MEIPASS", Path(__file__).parent))
-    candidate = bundle_dir / "uvicorn.exe"
-    if candidate.is_file():
-        return str(candidate)
-    return "uvicorn"
+def _run_server() -> None:
+    import uvicorn
+    from main import app  # backend/main.py is on sys.path via _BACKEND_DIR
+    uvicorn.run(app, host=HOST, port=PORT, log_level="info")
 
 
 def main() -> None:
@@ -39,13 +44,8 @@ def main() -> None:
         webbrowser.open(URL)
         return
 
-    backend_dir = Path(__file__).parent / "backend"
-    uvicorn = _find_uvicorn()
-
-    proc = subprocess.Popen(
-        [uvicorn, "main:app", "--host", HOST, "--port", str(PORT)],
-        cwd=str(backend_dir),
-    )
+    t = threading.Thread(target=_run_server, daemon=True)
+    t.start()
 
     print(f"Waiting for backend on {URL}...")
     deadline = time.monotonic() + STARTUP_TIMEOUT
@@ -54,16 +54,15 @@ def main() -> None:
             break
         time.sleep(0.3)
     else:
-        proc.terminate()
         sys.exit(f"ERROR: Backend did not start within {STARTUP_TIMEOUT}s.")
 
     webbrowser.open(URL)
-    print(f"App running at {URL}. Close this window to stop the server.")
+    print(f"App running at {URL}. Press Ctrl+C to stop.")
 
     try:
-        proc.wait()
+        t.join()
     except KeyboardInterrupt:
-        proc.terminate()
+        pass
 
 
 if __name__ == "__main__":

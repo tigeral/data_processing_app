@@ -46,4 +46,14 @@ Package the Data Processing App as a standalone Windows desktop application. The
 
 ## Implementation Notes
 
-> This section is filled in after implementation.
+**launcher.py — subprocess vs. in-process server (fix for issue #1)**
+
+The initial implementation spawned uvicorn as a subprocess via `subprocess.Popen`. This fails in a PyInstaller bundle because:
+1. `uvicorn` is bundled as a Python package, not a standalone executable — there is no `uvicorn.exe` in `sys._MEIPASS`.
+2. `Path(__file__).parent / "backend"` resolves to the `_MEIPASS` temp dir at runtime, which has a different layout than the source tree — `backend/main.py` is not at that path.
+
+**Fix**: uvicorn is now started in-process via `threading.Thread` + `uvicorn.run(app, ...)`. The backend package is made importable by inserting `_BUNDLE_ROOT / "backend"` into `sys.path` at module load time, which works correctly in both bundled (`sys._MEIPASS`) and source modes.
+
+**app.spec — datas vs. hiddenimports**
+
+`backend/app/` was listed in `datas`, which copies Python source files as raw data — they cannot be imported. Python modules must be resolved through `pathex` (so PyInstaller finds them during static analysis) and `hiddenimports` (for modules imported dynamically inside functions). Removed `backend/app` from `datas`; added `main`, `app.*` modules to `hiddenimports`.
